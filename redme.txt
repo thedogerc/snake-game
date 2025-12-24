@@ -1,384 +1,94 @@
-Fitten Code
-好的，我会为你编写一个俄语的 README 文件，解释如何与应用程序交互。以下是详细的 README 文件内容： 
-Игра “Змейка” (Snake Game)
-Описание
-Эта игра “Змейка” была разработана с использованием библиотеки pygame на Python. Цель игры — управлять змейкой, чтобы она съедала пищу и росла в размерах, избегая столкновений с собственным телом и границами игрового поля. 
-Установка
-Убедитесь, что Python установлен: 
-Убедитесь, что у вас установлен Python 3.14.0 или совместимая версия.
-Вы можете проверить версию Python, запустив python --version в командной строке.
-Установите библиотеку pygame: 
-Откройте командную строку (PowerShell или командная строка). 
-Перейдите в директорию проекта (например, D:\xz). 
-Выполните следующую команду: 
-pip install pygame
-Если у вас несколько версий Python, используйте pip3: 
-pip3 install pygame
-Запуск игры
-Откройте командную строку: 
-Перейдите в директорию проекта (например, D:\xz).
-Запустите скрипт игры: 
-Выполните следующую команду: 
-python main.py
-Если у вас несколько версий Python, используйте python3: 
-python3 main.py
-Управление игрой
-Вот основные команды для управления игрой: 
-Начало игры: 
-Нажмите Enter (Return) для начала новой игры.
-Пауза: 
-Нажмите Space для паузы и возобновления игры.
-Управление движением змейки: 
-Стрелка вверх или W для движения вверх.
-Стрелка вниз или S для движения вниз.
-Стрелка влево или A для движения влево.
-Стрелка вправо или D для движения вправо.
-Выход из игры: 
-Нажмите ESC для выхода из игры и закрытия окна.
-Правила игры
-Изначальная длина змейки: 
-Змейка начинает с длины 5 клеток.
-Пища: 
-На игровом поле может находиться не более 10 штук пищи.
-Когда змейка съедает пищу, она увеличивается на одну клетку, а ваш счет увеличивается на количество очков, указанное на пище.
-Скорость змейки: 
-Скорость змейки увеличивается линейно, когда ее длина достигает 10 и 30 клеток.
-Интервал обновления (T) уменьшается линейно от 600 мс до 300 мс при увеличении счета.
-Запрет на мгновенный разворот: 
-Змейка не может мгновенно развернуться в противоположную сторону (например, если змейка движется влево, нажатие клавиши вправо (D или Стрелка вправо) будет игнорироваться).
-Синхронизация потоков
-В игре используется многопоточность для разделения логики обработки событий и игровой логики. Для синхронизации между потоками используется механизм блокировки (lock): 
-Основной поток: 
-Отвечает за обработку событий от клавиатуры и безопасное передачу этих событий в поток логики игры.
-Поток логики игры: 
-Отвечает за обновление состояния игры, движение змейки, появление и удаление пищи, а также проверку условий окончания игры.
-Пример кода
-Вот упрощенный пример кода, который демонстрирует основные функции игры: 
-import random
-import sys
-import time
-import pygame
-from pygame.locals import *
-from collections import deque
-import threading
-Screen_Height = 480
-Screen_Width = 600
-Size = 20
-Line_Width = 1
-Area_x = (0, Screen_Width // Size - 1)
-Area_y = (2, Screen_Height // Size - 1)
-Food_Style_List = [(10, (255, 100, 100)), (20, (100, 255, 100)), (30, (100, 100, 255))]
-Light = (100, 100, 100)
-Dark = (200, 200, 200)
-Black = (0, 0, 0)
-Red = (200, 30, 30)
-Back_Ground = (40, 40, 60)
-lock = threading.Lock()
-def print_txt(screen, font, x, y, text, fcolor=(255, 255, 255)):
-    Text = font.render(text, True, fcolor)
-    screen.blit(Text, (x, y))
-def init_snake():
-    snake = deque()
-    for i in range(5):
-        snake.append((i, Area_y[0]))
-    return snake
-def create_food(snake, foods):
-    while len(foods) < 10:
-        food_x = random.randint(Area_x[0], Area_x[1])
-        food_y = random.randint(Area_y[0], Area_y[1])
-        food = (food_x, food_y)
-        if food not in snake and food not in foods:
-            food_style = Food_Style_List[random.randint(0, 2)]
-            foods.append((food, food_style))
-def food_style():
-    return Food_Style_List[random.randint(0, 2)]
-def game_logic(screen, font1, font2, snake, foods, pos, score, orispeed, speed, game_over, game_start, pause):
-    global last_move_time
-    while True:
-        cur_time = time.time()
-        if cur_time - last_move_time > speed:
-            with lock:
-                if not pause:
-                    last_move_time = cur_time
-                    cur_head = snake[0]
-                    next_s = (cur_head[0] + pos[0], cur_head[1] + pos[1])
-                    if next_s in [food for food, _ in foods]:
-                        index = next((i for i, (food, _) in enumerate(foods) if food == next_s), None)
-                        if index is not None:
-                            snake.appendleft(next_s)
-                            score += foods[index][1][0]
-                            del foods[index]
-                            create_food(snake, foods)
-                            speed = orispeed - 0.03 * (score // 100)
-                    else:
-                        if Area_x[0] <= next_s[0] <= Area_x[1] and Area_y[0] <= next_s[1] <= Area_y[1] and next_s not in snake:
-                            snake.appendleft(next_s)
-                            snake.pop()
-                        else:
-                            game_over = True
-                    if len(snake) > 10 and speed > 0.3:
-                        speed = 0.3
-                    elif len(snake) > 30 and speed > 0.15:
-                        speed = 0.15
-            screen.fill(Back_Ground)
-            for x in range(Size, Screen_Width, Size):
-                pygame.draw.line(screen, Black, (x, Area_y[0] * Size), (x, Screen_Height), Line_Width)
-            for y in range(Area_y[0] * Size, Screen_Height, Size):
-                pygame.draw.line(screen, Black, (0, y), (Screen_Width, y), Line_Width)
-            for food, style in foods:
-                pygame.draw.rect(screen, style[1], (food[0] * Size, food[1] * Size, Size, Size), 0)
-            for s in snake:
-                pygame.draw.rect(screen, Dark, (s[0] * Size + Line_Width, s[1] * Size + Line_Width,
-                                               Size - Line_Width * 2, Size - Line_Width * 2), 0)
-            print_txt(screen, font1, 30, 7, f'Скорость: {score // 100}')
-            print_txt(screen, font1, 450, 7, f'Счет: {score}')
-            if game_over:
-                if game_start:
-                    fwidth, fheight = font2.size('GAME OVER')
-                    print_txt(screen, font2, (Screen_Width - fwidth) // 2, (Screen_Height - fheight) // 2, 'GAME OVER', Red)
-            pygame.display.update()
-            time.sleep(0.01)  # Предотвращение перегрузки CPU
-def main():
-    global snake, foods, pos, score, orispeed, speed, game_over, game_start, last_move_time, pause
-    pygame.init()
-    screen = pygame.display.set_mode((Screen_Width, Screen_Height))
-    pygame.display.set_caption('Змейка')
-    font1 = pygame.font.SysFont('SimHei', 24)
-    font2 = pygame.font.SysFont(None, 72)
-    snake = init_snake()
-    foods = []
-    create_food(snake, foods)
-    pos = (1, 0)
-    game_over = True
-    game_start = False
-    score = 0
-    orispeed = 0.3
-    speed = orispeed
-    last_move_time = None
-    pause = False
-    game_thread = threading.Thread(target=game_logic, args=(screen, font1, font2, snake, foods, pos, score, orispeed, speed, game_over, game_start, pause))
-    game_thread.start()
-    while True:
-        for event in pygame.event.get():
-            if event.type == QUIT:
-                sys.exit()
-            elif event.type == KEYDOWN:
-                with lock:
-                    if event.key == K_RETURN:
-                        if game_over:
-                            game_start = True
-                            game_over = False
-                            snake = init_snake()
-                            foods = []
-                            create_food(snake, foods)
-                            pos = (1, 0)
-                            score = 0
-                            last_move_time = time.time()
-                            pause = False
-                    elif event.key == K_SPACE:
-                        if not game_over:
-                            pause = not pause
-                    elif event.key in (K_UP, K_w):
-                        if pos != (0, 1):
-                            pos = (0, -1)
-                    elif event.key in (K_DOWN, K_s):
-                        if pos != (0, -1):
-                            pos = (0, 1)
-                    elif event.key in (K_LEFT, K_a):
-                        if pos != (1, 0):
-                            pos = (-1, 0)
-                    elif event.key in (K_RIGHT, K_d):
-                        if pos != (-1, 0):
-                            pos = (1, 0)
-                    elif event.key == K_ESCAPE:
-                        sys.exit()
-if __name__ == '__main__':
-    main()
-Объяснение кода
-Инициализация: 
-Игра инициализируется с использованием pygame.init().
-Создается окно игры с размером Screen_Width x Screen_Height.
-Основные функции: 
-print_txt: Отображает текст на экране.
-init_snake: Инициализирует змейку с длиной 5 клеток.
-create_food: Создает пищу на игровом поле, чтобы на поле находилось не более 10 штук пищи.
-food_style: Возвращает случайный стиль пищи.
-Логика игры: 
-game_logic: Основной цикл игры, который обновляет состояние змейки, проверяет столкновения и отображает элементы на экране.
-Используется механизм блокировки (lock) для синхронизации между потоками.
-Основной цикл: 
-main: Создает окно игры, инициализирует змейку и пищу, запускает поток логики игры и слушает события от клавиатуры.
-Примечание
-Убедитесь, что у вас установлен pygame перед запуском игры.
-Если у вас возникнут какие-либо проблемы с установкой или запуском игры, пожалуйста, обратитесь за помощью.
-希望这个 README файл поможет вам и пользователям понять, как управлять игрой “Змейка”. Если у вас есть дополнительные требования или вопросы, пожалуйста, сообщите! 
-Дополнительные исправления в коде
-Также есть несколько мелких исправлений, которые нужно внести в ваш код, чтобы он работал корректно: 
-Добавьте отступы: 
-В Python важны отступы. Убедитесь, что все функции и блоки кода правильно отступлены.
-Исправьте глобальные переменные: 
-Переменные, которые изменяются в потоке game_logic, должны быть объявлены как глобальные в функции main.
-Исправьте вызов функции main: 
-Удалите ненужные аргументы при вызове функции main.
-Исправленный код
-import random
-import sys
-import time
-import pygame
-from pygame.locals import *
-from collections import deque
-import threading
-Screen_Height = 480
-Screen_Width = 600
-Size = 20
-Line_Width = 1
-Area_x = (0, Screen_Width // Size - 1)
-Area_y = (2, Screen_Height // Size - 1)
-Food_Style_List = [(10, (255, 100, 100)), (20, (100, 255, 100)), (30, (100, 100, 255))]
-Light = (100, 100, 100)
-Dark = (200, 200, 200)
-Black = (0, 0, 0)
-Red = (200, 30, 30)
-Back_Ground = (40, 40, 60)
-lock = threading.Lock()
-def print_txt(screen, font, x, y, text, fcolor=(255, 255, 255)):
-    Text = font.render(text, True, fcolor)
-    screen.blit(Text, (x, y))
-def init_snake():
-    snake = deque()
-    for i in range(5):
-        snake.append((i, Area_y[0]))
-    return snake
-def create_food(snake, foods):
-    while len(foods) < 10:
-        food_x = random.randint(Area_x[0], Area_x[1])
-        food_y = random.randint(Area_y[0], Area_y[1])
-        food = (food_x, food_y)
-        if food not in snake and food not in [f[0] for f in foods]:
-            food_style = Food_Style_List[random.randint(0, 2)]
-            foods.append((food, food_style))
-def food_style():
-    return Food_Style_List[random.randint(0, 2)]
-def game_logic(screen, font1, font2, snake, foods, pos, score, orispeed, speed, game_over, game_start, pause):
-    global last_move_time
-    while True:
-        cur_time = time.time()
-        if cur_time - last_move_time > speed:
-            with lock:
-                if not pause:
-                    last_move_time = cur_time
-                    cur_head = snake[0]
-                    next_s = (cur_head[0] + pos[0], cur_head[1] + pos[1])
-                    if next_s in [food for food, _ in foods]:
-                        index = next((i for i, (food, _) in enumerate(foods) if food == next_s), None)
-                        if index is not None:
-                            snake.appendleft(next_s)
-                            score += foods[index][1][0]
-                            del foods[index]
-                            create_food(snake, foods)
-                            speed = orispeed - 0.03 * (score // 100)
-                    else:
-                        if Area_x[0] <= next_s[0] <= Area_x[1] and Area_y[0] <= next_s[1] <= Area_y[1] and next_s not in snake:
-                            snake.appendleft(next_s)
-                            snake.pop()
-                        else:
-                            game_over = True
-                    if len(snake) > 10 and speed > 0.3:
-                        speed = 0.3
-                    elif len(snake) > 30 and speed > 0.15:
-                        speed = 0.15
-            screen.fill(Back_Ground)
-            for x in range(Size, Screen_Width, Size):
-                pygame.draw.line(screen, Black, (x, Area_y[0] * Size), (x, Screen_Height), Line_Width)
-            for y in range(Area_y[0] * Size, Screen_Height, Size):
-                pygame.draw.line(screen, Black, (0, y), (Screen_Width, y), Line_Width)
-            for food, style in foods:
-                pygame.draw.rect(screen, style[1], (food[0] * Size, food[1] * Size, Size, Size), 0)
-            for s in snake:
-                pygame.draw.rect(screen, Dark, (s[0] * Size + Line_Width, s[1] * Size + Line_Width,
-                                               Size - Line_Width * 2, Size - Line_Width * 2), 0)
-            print_txt(screen, font1, 30, 7, f'Скорость: {score // 100}')
-            print_txt(screen, font1, 450, 7, f'Счет: {score}')
-            if game_over:
-                if game_start:
-                    fwidth, fheight = font2.size('GAME OVER')
-                    print_txt(screen, font2, (Screen_Width - fwidth) // 2, (Screen_Height - fheight) // 2, 'GAME OVER', Red)
-            pygame.display.update()
-            time.sleep(0.01)  # Предотвращение перегрузки CPU
-def main():
-    global snake, foods, pos, score, orispeed, speed, game_over, game_start, last_move_time, pause
-    pygame.init()
-    screen = pygame.display.set_mode((Screen_Width, Screen_Height))
-    pygame.display.set_caption('Змейка')
-    font1 = pygame.font.SysFont('SimHei', 24)
-    font2 = pygame.font.SysFont(None, 72)
-    snake = init_snake()
-    foods = []
-    create_food(snake, foods)
-    pos = (1, 0)
-    game_over = True
-    game_start = False
-    score = 0
-    orispeed = 0.3
-    speed = orispeed
-    last_move_time = time.time()
-    pause = False
-    game_thread = threading.Thread(target=game_logic, args=(screen, font1, font2, snake, foods, pos, score, orispeed, speed, game_over, game_start, pause))
-    game_thread.start()
-    while True:
-        for event in pygame.event.get():
-            if event.type == QUIT:
-                sys.exit()
-            elif event.type == KEYDOWN:
-                with lock:
-                    if event.key == K_RETURN:
-                        if game_over:
-                            game_start = True
-                            game_over = False
-                            snake = init_snake()
-                            foods = []
-                            create_food(snake, foods)
-                            pos = (1, 0)
-                            score = 0
-                            last_move_time = time.time()
-                            pause = False
-                    elif event.key == K_SPACE:
-                        if not game_over:
-                            pause = not pause
-                    elif event.key in (K_UP, K_w):
-                        if pos != (0, 1):
-                            pos = (0, -1)
-                    elif event.key in (K_DOWN, K_s):
-                        if pos != (0, -1):
-                            pos = (0, 1)
-                    elif event.key in (K_LEFT, K_a):
-                        if pos != (1, 0):
-                            pos = (-1, 0)
-                    elif event.key in (K_RIGHT, K_d):
-                        if pos != (-1, 0):
-                            pos = (1, 0)
-                    elif event.key == K_ESCAPE:
-                        sys.exit()
-if __name__ == '__main__':
-    main()
-Объяснение изменений
-Отступы: 
-Добавлены отступы для всех функций и блоков кода.
-Глобальные переменные: 
-Объявлены глобальные переменные last_move_time внутри функции game_logic.
-Исправление вызова функции main: 
-Удалены ненужные аргументы при вызове функции main.
-Исправление ошибок в логике создания пищи: 
-Исправлена проверка, чтобы пища не появлялась на змейке или уже существующей пище.
-Запуск игры
-Сохраните исправленный код в файл: 
-Сохраните код в файл main.py в директории D:\xz.
-Установите pygame: 
-Убедитесь, что pygame установлен: 
-pip install pygame
-Запустите игру: 
-Откройте командную строку: 
-PS D:\xz>
-Запустите скрипт: 
-python main.py
-Если все сделано правильно, игра должна запуститься без ошибок, и вы сможете управлять змейкой согласно указанным правилам.   Если у вас возникнут дополнительные вопросы или проблемы, пожалуйста, сообщите!
+# Игра "Змейка" (Snake Game)
+
+## Описание
+
+Эта игра "Змейка" была разработана с использованием библиотеки `pygame` на Python. Цель игры — управлять змейкой, чтобы она съедала пищу и росла в размерах, избегая столкновений с собственным телом и границами игрового поля.
+
+## Установка
+
+1. **Убедитесь, что Python установлен**:
+   - Убедитесь, что у вас установлен Python 3.14.0 или совместимая версия.
+   - Вы можете проверить версию Python, запустив `python --version` в командной строке.
+
+2. **Установите библиотеку `pygame`**:
+   - Откройте командную строку (PowerShell или командная строка).
+   - Перейдите в директорию проекта (например, `D:\xz`).
+   - Выполните следующую команду:
+
+     ```sh
+     pip install pygame
+     ```
+
+     Если у вас несколько версий Python, используйте `pip3`:
+
+     ```sh
+     pip3 install pygame
+     ```
+
+## Запуск игры
+
+1. **Откройте командную строку**:
+   - Перейдите в директорию проекта (например, `D:\xz`).
+
+2. **Запустите скрипт игры**:
+   - Выполните следующую команду:
+
+     ```sh
+     python main.py
+     ```
+
+     Если у вас несколько версий Python, используйте `python3`:
+
+     ```sh
+     python3 main.py
+     ```
+
+## Управление игрой
+
+Вот основные команды для управления игрой:
+
+- **Начало игры**:
+  - Нажмите `Enter` (`Return`) для начала новой игры.
+
+- **Пауза**:
+  - Нажмите `Space` для паузы и возобновления игры.
+
+- **Управление движением змейки**:
+  - `Стрелка вверх` или `W` для движения вверх.
+  - `Стрелка вниз` или `S` для движения вниз.
+  - `Стрелка влево` или `A` для движения влево.
+  - `Стрелка вправо` или `D` для движения вправо.
+
+- **Выход из игры**:
+  - Нажмите `ESC` для выхода из игры и закрытия окна.
+
+## Правила игры
+
+1. **Изначальная длина змейки**:
+   - Змейка начинает с длины 5 клеток.
+
+2. **Пища**:
+   - На игровом поле может находиться не более 10 штук пищи.
+   - Когда змейка съедает пищу, она увеличивается на одну клетку, а ваш счет увеличивается на количество очков, указанное на пище.
+
+3. **Скорость змейки**:
+   - Скорость змейки увеличивается линейно, когда ее длина достигает 10 и 30 клеток.
+   - Интервал обновления (T) уменьшается линейно от 600 мс до 300 мс при увеличении счета.
+
+4. **Запрет на мгновенный разворот**:
+   - Змейка не может мгновенно развернуться в противоположную сторону (например, если змейка движется влево, нажатие клавиши вправо (`D` или `Стрелка вправо`) будет игнорироваться).
+
+## Синхронизация потоков
+
+В игре используется многопоточность для разделения логики обработки событий и игровой логики. Для синхронизации между потоками используется механизм блокировки (`lock`):
+
+- **Основной поток**:
+  - Отвечает за обработку событий от клавиатуры и безопасное передачу этих событий в поток логики игры.
+
+- **Поток логики игры**:
+  - Отвечает за обновление состояния игры, движение змейки, появление и удаление пищи, а также проверку условий окончания игры.
+
+## Примечание
+
+- Убедитесь, что у вас установлен `pygame` перед запуском игры.
+- Если у вас возникнут какие-либо проблемы с установкой или запуском игры, пожалуйста, обратитесь за помощью.
